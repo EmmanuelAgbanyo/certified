@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Certificate Portal"
+description = "A certificate collection portal where administrators manage institutions, certificate templates, and recipient lists, while recipients search for and download their own certificates."
+version = "1.0.0"
+id = "artifacts/certificate-portal"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18536
+
+[services.development]
+run = "pnpm --filter @workspace/certificate-portal run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/certificate-portal", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/certificate-portal/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18536"
+BASE_PATH = "/"
