@@ -633,9 +633,9 @@ export const getSearchCertificatesUrl = () => {
 }
 
 /**
- * Matches a full name within the selected institution. Does not return
- * suggestions or other recipients' names.
- * @summary Find certificates belonging to an exact recipient name
+ * Matches partial names within the selected institution, including first
+ * names, last names, and name fragments. Returns at most 20 results.
+ * @summary Find certificates using part of a recipient name
  */
 export const searchCertificates = async (certificateSearchInput: CertificateSearchInput, options?: Parameters<typeof customFetch>[1]): Promise<CertificateMatch[]> => {
 
@@ -701,7 +701,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type SearchCertificatesMutationVariables = {data: BodyType<CertificateSearchInput>}
 
     /**
- * @summary Find certificates belonging to an exact recipient name
+ * @summary Find certificates using part of a recipient name
  */
 export const useSearchCertificates = <TError = ErrorType<ErrorEnvelope>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof searchCertificates>>, TError,SearchCertificatesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

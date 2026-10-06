@@ -94,7 +94,7 @@ export interface CertificateSearchInput {
      * @minLength 2
      * @maxLength 180
      */
-  fullName: string;
+  name: string;
 }
 
 export interface CertificateMatch {

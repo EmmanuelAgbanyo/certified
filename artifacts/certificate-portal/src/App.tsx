@@ -126,7 +126,7 @@ function HomePage() {
   const search = useSearchCertificates();
   const download = useDownloadCertificate();
   const [institutionId, setInstitutionId] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [nameQuery, setNameQuery] = useState('');
   const [downloadError, setDownloadError] = useState('');
   const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
   const [previewPendingId, setPreviewPendingId] = useState<string | null>(null);
@@ -140,10 +140,10 @@ function HomePage() {
 
   async function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!institutionId || fullName.trim().length < 2) return;
+    if (!institutionId || nameQuery.trim().length < 2) return;
     setDownloadError('');
     setPreview(null);
-    search.mutate({ data: { institutionId, fullName: fullName.trim() } });
+    search.mutate({ data: { institutionId, name: nameQuery.trim() } });
   }
 
   async function viewCertificate(id: string, name: string) {
@@ -195,7 +195,7 @@ function HomePage() {
               </p>
               <div className="mt-9 flex items-center gap-3 text-xs text-[#cfdbd3]">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20"><ShieldCheck size={15} /></span>
-                Exact-name search · private by design
+                Search by name within your institution
               </div>
             </div>
             <div className="relative hidden min-h-[360px] items-center justify-center lg:flex">
@@ -220,7 +220,7 @@ function HomePage() {
               </div>
               <div className="absolute bottom-[8%] right-[4%] flex items-center gap-3 rounded-xl border border-white/10 bg-[#244b3f] px-4 py-3 shadow-xl">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#dbc77e] text-[#214c40]"><BadgeCheck size={17} /></span>
-                <span><span className="block text-[11px] font-semibold text-[#f8f3e4]">Your achievement, protected</span><span className="mt-1 block text-[9px] text-[#b9cbc0]">Only your exact name can find it</span></span>
+                <span><span className="block text-[11px] font-semibold text-[#f8f3e4]">Your achievement, protected</span><span className="mt-1 block text-[9px] text-[#b9cbc0]">No public recipient directory</span></span>
               </div>
             </div>
           </div>
@@ -233,7 +233,7 @@ function HomePage() {
               <div>
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#a47d31]">Certificate lookup</p>
                 <h2 id="lookup-heading" className="serif text-[25px] tracking-[-.04em] text-[#203c35]">Find your certificate</h2>
-                <p className="mt-2 text-sm text-[#728078]">Use the name exactly as it appears on your institution's records.</p>
+                <p className="mt-2 text-sm text-[#728078]">Search by your first name, last name, or any part of your name.</p>
               </div>
               <span className="hidden h-10 w-10 items-center justify-center rounded-full bg-[#f3efe2] text-[#426e5b] sm:flex"><Search size={18} /></span>
             </div>
@@ -256,16 +256,16 @@ function HomePage() {
                 </span>
               </label>
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold text-[#334d43]">Full name</span>
+                <span className="mb-2 block text-xs font-semibold text-[#334d43]">Name</span>
                 <input
-                  value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
+                  value={nameQuery}
+                  onChange={(event) => setNameQuery(event.target.value)}
                   className="form-control"
-                  placeholder="Enter your exact full name"
+                  placeholder="Enter at least 2 letters"
                   minLength={2}
                   maxLength={180}
-                  autoComplete="name"
-                  data-testid="input-full-name"
+                  autoComplete="off"
+                  data-testid="input-name-search"
                   required
                 />
               </label>
@@ -286,8 +286,8 @@ function HomePage() {
                 {matches.length ? (
                   <>
                     <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-                      <div><div className="flex items-center gap-2 text-sm font-semibold text-[#244a3e]"><Check size={16} /> Certificate found</div><p className="mt-1 text-xs text-[#77837b]">Matched against the exact name you entered.</p></div>
-                      <span className="text-[11px] font-medium text-[#77837b]">{matches.length} {matches.length === 1 ? 'certificate' : 'certificates'}</span>
+                      <div><div className="flex items-center gap-2 text-sm font-semibold text-[#244a3e]"><Check size={16} /> Matching certificates</div><p className="mt-1 text-xs text-[#77837b]">Matches for “{nameQuery.trim()}” in this institution.</p></div>
+                      <span className="text-[11px] font-medium text-[#77837b]">{matches.length === 20 ? 'Showing up to 20 — add more letters to narrow results' : `${matches.length} ${matches.length === 1 ? 'certificate' : 'certificates'}`}</span>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       {matches.map((match) => (
@@ -312,7 +312,7 @@ function HomePage() {
                 ) : (
                   <div className="flex gap-4 rounded-xl bg-[#f5f2e9] p-5" data-testid="status-no-match">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ece6d5] text-[#947a3e]"><Search size={18} /></span>
-                    <div><h3 className="text-sm font-semibold text-[#304a3f]">No certificate found for those details</h3><p className="mt-1 max-w-[620px] text-sm leading-6 text-[#718078]">Check the spelling, spacing and institution, then try again. We only check the exact name you enter and never show other recipients.</p></div>
+                    <div><h3 className="text-sm font-semibold text-[#304a3f]">No certificate found for that name</h3><p className="mt-1 max-w-[620px] text-sm leading-6 text-[#718078]">Try a shorter part of your name, check the spelling, or choose another institution. Results are limited to the institution you selected.</p></div>
                   </div>
                 )}
               </div>
@@ -329,7 +329,7 @@ function HomePage() {
             </div>
             <div className="divide-y divide-[#e2dccf] border-y border-[#e2dccf]">
               <Step number="01" title="Choose your institution" detail="Select the school or organisation that issued your certificate." icon={<Building2 size={18} />} />
-              <Step number="02" title="Enter your full name" detail="Type your name exactly as it was recorded by your institution." icon={<UsersRound size={18} />} />
+              <Step number="02" title="Search by name" detail="Use your first name, last name, or another part of your name." icon={<UsersRound size={18} />} />
               <Step number="03" title="View and download your certificate" detail="Preview your certificate in the portal, then save a PDF copy." icon={<ArrowDownToLine size={18} />} />
             </div>
           </div>
@@ -666,7 +666,7 @@ function AdminPage() {
                   <textarea id="recipient-names" className="form-control mt-2 min-h-[124px] resize-y py-3 leading-6" value={recipientText} onChange={(event) => { setRecipientText(event.target.value); setRecipientFileName(''); }} placeholder="One exact full name per line" data-testid="input-recipient-names" required />
                 </div>
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#ebe5da] pt-4">
-                <span className="text-xs text-[#7a857e]">{recipientText.split(/\r?\n/).filter((line) => line.trim()).length} names in this batch · exact-name matching</span>
+                <span className="text-xs text-[#7a857e]">{recipientText.split(/\r?\n/).filter((line) => line.trim()).length} names in this batch · searchable by name</span>
                 <button type="submit" className="primary-button justify-center" disabled={busy || createBatch.isPending} data-testid="button-create-batch">
                   {busy ? <><span className="button-shimmer">Uploading & publishing…</span></> : <>Create batch <ArrowRight size={15} /></>}
                 </button>

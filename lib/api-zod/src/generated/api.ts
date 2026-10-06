@@ -138,18 +138,18 @@ export const ListBatchRecipientsResponse = zod.array(ListBatchRecipientsResponse
 
 
 /**
- * Matches a full name within the selected institution. Does not return
- * suggestions or other recipients' names.
- * @summary Find certificates belonging to an exact recipient name
+ * Matches partial names within the selected institution, including first
+ * names, last names, and name fragments. Returns at most 20 results.
+ * @summary Find certificates using part of a recipient name
  */
-export const searchCertificatesBodyFullNameMin = 2;
-export const searchCertificatesBodyFullNameMax = 180;
+export const searchCertificatesBodyNameMin = 2;
+export const searchCertificatesBodyNameMax = 180;
 
 
 
 export const SearchCertificatesBody = zod.object({
   "institutionId": zod.string().uuid(),
-  "fullName": zod.string().min(searchCertificatesBodyFullNameMin).max(searchCertificatesBodyFullNameMax)
+  "name": zod.string().min(searchCertificatesBodyNameMin).max(searchCertificatesBodyNameMax)
 })
 
 export const SearchCertificatesResponseItem = zod.object({

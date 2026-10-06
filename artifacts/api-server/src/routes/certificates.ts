@@ -11,7 +11,7 @@ import {
   db,
   institutionsTable,
 } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, ilike } from "drizzle-orm";
 import { Router, type IRouter, type Request } from "express";
 import { createCertificatePdf } from "../lib/certificatePdf";
 import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage";
@@ -24,6 +24,10 @@ const requestsByIp = new Map<string, { count: number; resetAt: number }>();
 
 function normalizeName(value: string): string {
   return value.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
 }
 
 function allowRequest(req: Request): boolean {
@@ -52,9 +56,11 @@ router.post("/certificates/search", async (req, res): Promise<void> => {
 
   const parsed = SearchCertificatesBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Select an institution and enter your full name." });
+    res.status(400).json({ error: "Select an institution and enter at least two characters of a name." });
     return;
   }
+  const searchTerm = normalizeName(parsed.data.name);
+  const escapedSearchTerm = escapeLikePattern(searchTerm);
 
   const rows = await db
     .select({
@@ -75,9 +81,10 @@ router.post("/certificates/search", async (req, res): Promise<void> => {
     .where(
       and(
         eq(institutionsTable.id, parsed.data.institutionId),
-        eq(certificateRecipientsTable.normalizedName, normalizeName(parsed.data.fullName)),
+        ilike(certificateRecipientsTable.normalizedName, `%${escapedSearchTerm}%`),
       ),
     )
+    .orderBy(asc(certificateRecipientsTable.fullName))
     .limit(20);
 
   res.json(SearchCertificatesResponse.parse(rows));

@@ -217,10 +217,10 @@ paths:
     post:
       operationId: searchCertificates
       tags: [certificates]
-      summary: Find certificates belonging to an exact recipient name
+      summary: Find certificates using part of a recipient name
       description: |
-        Matches a full name within the selected institution. Does not return
-        suggestions or other recipients' names.
+        Matches partial names within the selected institution, including first
+        names, last names, and name fragments. Returns at most 20 results.
       requestBody:
         required: true
         content:
@@ -445,12 +445,12 @@ components:
             $ref: "#/components/schemas/CertificateBatch"
     CertificateSearchInput:
       type: object
-      required: [institutionId, fullName]
+      required: [institutionId, name]
       properties:
         institutionId:
           type: string
           format: uuid
-        fullName:
+        name:
           type: string
           minLength: 2
           maxLength: 180
