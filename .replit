@@ -23,3 +23,6 @@ timeoutMs = 20000
 
 [userenv.shared]
 CERTIFICATE_ADMIN_EMAIL = "policyp28@gmail.com"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-708009a1-e56d-48c6-8c7f-479bfd5daf43"
