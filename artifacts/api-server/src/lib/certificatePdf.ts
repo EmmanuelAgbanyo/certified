@@ -3,11 +3,26 @@ import {
   StandardFonts,
   rgb,
 } from "pdf-lib";
+import type { CertificateFontFamily } from "./certificateNameStyle";
+
+const pdfFonts: Record<CertificateFontFamily, StandardFonts> = {
+  helvetica: StandardFonts.Helvetica,
+  helveticaBold: StandardFonts.HelveticaBold,
+  timesRoman: StandardFonts.TimesRoman,
+  timesRomanBold: StandardFonts.TimesRomanBold,
+  courier: StandardFonts.Courier,
+  courierBold: StandardFonts.CourierBold,
+};
 
 export async function createCertificatePdf(
   template: Buffer,
   contentType: string,
   recipientName: string,
+  nameStyle: {
+    fontFamily: CertificateFontFamily;
+    textColor: string;
+    fontSize: number;
+  },
 ): Promise<Uint8Array> {
   const pdf =
     contentType === "application/pdf"
@@ -19,21 +34,25 @@ export async function createCertificatePdf(
     throw new Error("The template does not contain a page.");
   }
 
-  const font = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const font = await pdf.embedFont(pdfFonts[nameStyle.fontFamily]);
   const { width, height } = page.getSize();
-  let fontSize = Math.min(36, height * 0.06);
+  let fontSize = Math.min(nameStyle.fontSize, height * 0.12);
   const maxTextWidth = width * 0.78;
   while (fontSize > 12 && font.widthOfTextAtSize(recipientName, fontSize) > maxTextWidth) {
     fontSize -= 1;
   }
 
   const textWidth = font.widthOfTextAtSize(recipientName, fontSize);
+  const hexColor = nameStyle.textColor.slice(1);
+  const red = Number.parseInt(hexColor.slice(0, 2), 16) / 255;
+  const green = Number.parseInt(hexColor.slice(2, 4), 16) / 255;
+  const blue = Number.parseInt(hexColor.slice(4, 6), 16) / 255;
   page.drawText(recipientName, {
     x: (width - textWidth) / 2,
     y: height * 0.42,
     size: fontSize,
     font,
-    color: rgb(0.12, 0.18, 0.24),
+    color: rgb(red, green, blue),
   });
 
   return pdf.save();

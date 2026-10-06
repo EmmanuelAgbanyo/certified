@@ -50,6 +50,44 @@ export const CreateInstitutionResponse = zod.object({
 
 
 /**
+ * @summary Rename an institution
+ */
+export const UpdateInstitutionParams = zod.object({
+  "institutionId": zod.coerce.string().uuid()
+})
+
+export const updateInstitutionBodyNameMin = 2;
+export const updateInstitutionBodyNameMax = 160;
+
+
+
+export const UpdateInstitutionBody = zod.object({
+  "name": zod.string().min(updateInstitutionBodyNameMin).max(updateInstitutionBodyNameMax)
+})
+
+export const UpdateInstitutionResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "batchCount": zod.number().int(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete an institution and its certificate records
+ */
+export const DeleteInstitutionParams = zod.object({
+  "institutionId": zod.coerce.string().uuid()
+})
+
+export const DeleteInstitutionResponse = zod.object({
+  "deletedBatchCount": zod.number().int(),
+  "deletedRecipientCount": zod.number().int(),
+  "storageCleanupPending": zod.boolean()
+})
+
+
+/**
  * @summary Get certificate portal totals and recent batches
  */
 export const GetAdminOverviewResponse = zod.object({
@@ -67,6 +105,52 @@ export const GetAdminOverviewResponse = zod.object({
   "recipientCount": zod.number().int(),
   "createdAt": zod.coerce.date()
 }))
+})
+
+
+/**
+ * @summary Get the global certificate recipient name style
+ */
+export const getCertificateNameStyleResponseTextColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const getCertificateNameStyleResponseFontSizeMin = 12;
+export const getCertificateNameStyleResponseFontSizeMax = 72;
+
+
+
+export const GetCertificateNameStyleResponse = zod.object({
+  "fontFamily": zod.enum(['helvetica', 'helveticaBold', 'timesRoman', 'timesRomanBold', 'courier', 'courierBold']),
+  "textColor": zod.string().regex(getCertificateNameStyleResponseTextColorRegExp),
+  "fontSize": zod.number().int().min(getCertificateNameStyleResponseFontSizeMin).max(getCertificateNameStyleResponseFontSizeMax),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Save the global certificate recipient name style
+ */
+export const updateCertificateNameStyleBodyTextColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const updateCertificateNameStyleBodyFontSizeMin = 12;
+export const updateCertificateNameStyleBodyFontSizeMax = 72;
+
+
+
+export const UpdateCertificateNameStyleBody = zod.object({
+  "fontFamily": zod.enum(['helvetica', 'helveticaBold', 'timesRoman', 'timesRomanBold', 'courier', 'courierBold']),
+  "textColor": zod.string().regex(updateCertificateNameStyleBodyTextColorRegExp),
+  "fontSize": zod.number().int().min(updateCertificateNameStyleBodyFontSizeMin).max(updateCertificateNameStyleBodyFontSizeMax)
+})
+
+export const updateCertificateNameStyleResponseTextColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const updateCertificateNameStyleResponseFontSizeMin = 12;
+export const updateCertificateNameStyleResponseFontSizeMax = 72;
+
+
+
+export const UpdateCertificateNameStyleResponse = zod.object({
+  "fontFamily": zod.enum(['helvetica', 'helveticaBold', 'timesRoman', 'timesRomanBold', 'courier', 'courierBold']),
+  "textColor": zod.string().regex(updateCertificateNameStyleResponseTextColorRegExp),
+  "fontSize": zod.number().int().min(updateCertificateNameStyleResponseFontSizeMin).max(updateCertificateNameStyleResponseFontSizeMax),
+  "updatedAt": zod.coerce.date()
 })
 
 
@@ -124,6 +208,48 @@ export const CreateBatchResponse = zod.object({
 
 
 /**
+ * @summary Update a certificate batch title or institution
+ */
+export const UpdateCertificateBatchParams = zod.object({
+  "batchId": zod.coerce.string().uuid()
+})
+
+export const updateCertificateBatchBodyTitleMin = 2;
+export const updateCertificateBatchBodyTitleMax = 160;
+
+
+
+export const UpdateCertificateBatchBody = zod.object({
+  "institutionId": zod.string().uuid(),
+  "title": zod.string().min(updateCertificateBatchBodyTitleMin).max(updateCertificateBatchBodyTitleMax)
+})
+
+export const UpdateCertificateBatchResponse = zod.object({
+  "id": zod.string().uuid(),
+  "institutionId": zod.string().uuid(),
+  "institutionName": zod.string(),
+  "title": zod.string(),
+  "templateFilename": zod.string(),
+  "templateContentType": zod.string(),
+  "recipientCount": zod.number().int(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a certificate batch and its recipients
+ */
+export const DeleteCertificateBatchParams = zod.object({
+  "batchId": zod.coerce.string().uuid()
+})
+
+export const DeleteCertificateBatchResponse = zod.object({
+  "deletedRecipientCount": zod.number().int(),
+  "storageCleanupPending": zod.boolean()
+})
+
+
+/**
  * @summary List the recipient names in a certificate batch
  */
 export const ListBatchRecipientsParams = zod.object({
@@ -135,6 +261,66 @@ export const ListBatchRecipientsResponseItem = zod.object({
   "fullName": zod.string()
 })
 export const ListBatchRecipientsResponse = zod.array(ListBatchRecipientsResponseItem)
+
+
+/**
+ * @summary Add recipient names to an existing batch
+ */
+export const AddBatchRecipientsParams = zod.object({
+  "batchId": zod.coerce.string().uuid()
+})
+
+export const addBatchRecipientsBodyRecipientsItemMin = 2;
+export const addBatchRecipientsBodyRecipientsItemMax = 180;
+
+export const addBatchRecipientsBodyRecipientsMax = 5000;
+
+
+
+export const AddBatchRecipientsBody = zod.object({
+  "recipients": zod.array(zod.string().min(addBatchRecipientsBodyRecipientsItemMin).max(addBatchRecipientsBodyRecipientsItemMax)).min(1).max(addBatchRecipientsBodyRecipientsMax)
+})
+
+export const AddBatchRecipientsResponse = zod.object({
+  "added": zod.number().int(),
+  "skipped": zod.number().int()
+})
+
+
+/**
+ * @summary Rename one recipient
+ */
+export const UpdateBatchRecipientParams = zod.object({
+  "batchId": zod.coerce.string().uuid(),
+  "recipientId": zod.coerce.string().uuid()
+})
+
+export const updateBatchRecipientBodyFullNameMin = 2;
+export const updateBatchRecipientBodyFullNameMax = 180;
+
+
+
+export const UpdateBatchRecipientBody = zod.object({
+  "fullName": zod.string().min(updateBatchRecipientBodyFullNameMin).max(updateBatchRecipientBodyFullNameMax)
+})
+
+export const UpdateBatchRecipientResponse = zod.object({
+  "id": zod.string().uuid(),
+  "fullName": zod.string()
+})
+
+
+/**
+ * @summary Delete one recipient
+ */
+export const DeleteBatchRecipientParams = zod.object({
+  "batchId": zod.coerce.string().uuid(),
+  "recipientId": zod.coerce.string().uuid()
+})
+
+export const DeleteBatchRecipientResponse = zod.object({
+  "deleted": zod.boolean()
+})
 
 
 /**

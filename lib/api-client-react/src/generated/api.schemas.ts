@@ -28,6 +28,20 @@ export interface InstitutionInput {
   name: string;
 }
 
+export interface InstitutionUpdateInput {
+  /**
+     * @minLength 2
+     * @maxLength 160
+     */
+  name: string;
+}
+
+export interface DeleteInstitutionResult {
+  deletedBatchCount: number;
+  deletedRecipientCount: number;
+  storageCleanupPending: boolean;
+}
+
 export interface CertificateBatch {
   id: string;
   institutionId: string;
@@ -75,9 +89,97 @@ export interface CertificateBatchInput {
   recipients: string[];
 }
 
+export interface CertificateBatchUpdateInput {
+  institutionId: string;
+  /**
+     * @minLength 2
+     * @maxLength 160
+     */
+  title: string;
+}
+
+export interface DeleteBatchResult {
+  deletedRecipientCount: number;
+  storageCleanupPending: boolean;
+}
+
+export interface BatchRecipientsInput {
+  /**
+     * @minItems 1
+     * @maxItems 5000
+     * @items.minLength 2
+     * @items.maxLength 180
+     */
+  recipients: string[];
+}
+
+export interface BatchRecipientsResult {
+  added: number;
+  skipped: number;
+}
+
 export interface CertificateRecipient {
   id: string;
   fullName: string;
+}
+
+export interface CertificateRecipientUpdateInput {
+  /**
+     * @minLength 2
+     * @maxLength 180
+     */
+  fullName: string;
+}
+
+export interface DeleteRecipientResult {
+  deleted: boolean;
+}
+
+export type CertificateNameStyleFontFamily = typeof CertificateNameStyleFontFamily[keyof typeof CertificateNameStyleFontFamily];
+
+
+export const CertificateNameStyleFontFamily = {
+  helvetica: 'helvetica',
+  helveticaBold: 'helveticaBold',
+  timesRoman: 'timesRoman',
+  timesRomanBold: 'timesRomanBold',
+  courier: 'courier',
+  courierBold: 'courierBold',
+} as const;
+
+export interface CertificateNameStyle {
+  fontFamily: CertificateNameStyleFontFamily;
+  /** @pattern ^#[0-9a-fA-F]{6}$ */
+  textColor: string;
+  /**
+     * @minimum 12
+     * @maximum 72
+     */
+  fontSize: number;
+  updatedAt: string;
+}
+
+export type CertificateNameStyleInputFontFamily = typeof CertificateNameStyleInputFontFamily[keyof typeof CertificateNameStyleInputFontFamily];
+
+
+export const CertificateNameStyleInputFontFamily = {
+  helvetica: 'helvetica',
+  helveticaBold: 'helveticaBold',
+  timesRoman: 'timesRoman',
+  timesRomanBold: 'timesRomanBold',
+  courier: 'courier',
+  courierBold: 'courierBold',
+} as const;
+
+export interface CertificateNameStyleInput {
+  fontFamily: CertificateNameStyleInputFontFamily;
+  /** @pattern ^#[0-9a-fA-F]{6}$ */
+  textColor: string;
+  /**
+     * @minimum 12
+     * @maximum 72
+     */
+  fontSize: number;
 }
 
 export interface AdminOverview {

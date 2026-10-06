@@ -18,6 +18,8 @@ tags:
     description: Recipient certificate search and download.
   - name: admin
     description: Administrator overview.
+  - name: settings
+    description: Global certificate name styling.
   - name: storage
     description: Private template file upload.
 paths:
@@ -89,6 +91,97 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /institutions/{institutionId}:
+    patch:
+      operationId: updateInstitution
+      tags: [institutions]
+      summary: Rename an institution
+      parameters:
+        - name: institutionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstitutionUpdateInput"
+      responses:
+        "200":
+          description: Institution updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Institution"
+        "400":
+          description: Invalid institution details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Institution not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: Institution name already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    delete:
+      operationId: deleteInstitution
+      tags: [institutions]
+      summary: Delete an institution and its certificate records
+      parameters:
+        - name: institutionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Institution and its dependent records deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteInstitutionResult"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Institution not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /admin/overview:
     get:
       operationId: getAdminOverview
@@ -101,6 +194,65 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminOverview"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/certificate-name-style:
+    get:
+      operationId: getCertificateNameStyle
+      tags: [settings]
+      summary: Get the global certificate recipient name style
+      responses:
+        "200":
+          description: Saved style applied to certificates across all institutions and batches.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateNameStyle"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    put:
+      operationId: updateCertificateNameStyle
+      tags: [settings]
+      summary: Save the global certificate recipient name style
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertificateNameStyleInput"
+      responses:
+        "200":
+          description: Style saved and used for subsequent certificate downloads.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateNameStyle"
+        "400":
+          description: Invalid certificate name style.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "401":
           description: Sign-in required.
           content:
@@ -174,6 +326,91 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /batches/{batchId}:
+    patch:
+      operationId: updateCertificateBatch
+      tags: [batches]
+      summary: Update a certificate batch title or institution
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertificateBatchUpdateInput"
+      responses:
+        "200":
+          description: Batch updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateBatch"
+        "400":
+          description: Invalid batch details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Batch or institution not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    delete:
+      operationId: deleteCertificateBatch
+      tags: [batches]
+      summary: Delete a certificate batch and its recipients
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Batch and its recipients deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteBatchResult"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Batch not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /batches/{batchId}/recipients:
     get:
       operationId: listBatchRecipients
@@ -209,6 +446,157 @@ paths:
                 $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: Batch not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    post:
+      operationId: addBatchRecipients
+      tags: [batches]
+      summary: Add recipient names to an existing batch
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchRecipientsInput"
+      responses:
+        "200":
+          description: Recipient names added; duplicates are skipped.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchRecipientsResult"
+        "400":
+          description: Invalid recipient names.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Batch not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /batches/{batchId}/recipients/{recipientId}:
+    patch:
+      operationId: updateBatchRecipient
+      tags: [batches]
+      summary: Rename one recipient
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: recipientId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertificateRecipientUpdateInput"
+      responses:
+        "200":
+          description: Recipient updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateRecipient"
+        "400":
+          description: Invalid recipient details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Recipient not found in this batch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: A recipient with this name already exists in the batch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    delete:
+      operationId: deleteBatchRecipient
+      tags: [batches]
+      summary: Delete one recipient
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: recipientId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Recipient and its download history deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteRecipientResult"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Recipient not found in this batch.
           content:
             application/json:
               schema:
@@ -365,6 +753,24 @@ components:
           type: string
           minLength: 2
           maxLength: 160
+    InstitutionUpdateInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 160
+    DeleteInstitutionResult:
+      type: object
+      required: [deletedBatchCount, deletedRecipientCount, storageCleanupPending]
+      properties:
+        deletedBatchCount:
+          type: integer
+        deletedRecipientCount:
+          type: integer
+        storageCleanupPending:
+          type: boolean
     CertificateBatch:
       type: object
       required: [id, institutionId, institutionName, title, templateFilename, templateContentType, recipientCount, createdAt]
@@ -418,6 +824,45 @@ components:
             type: string
             minLength: 2
             maxLength: 180
+    CertificateBatchUpdateInput:
+      type: object
+      required: [institutionId, title]
+      properties:
+        institutionId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 2
+          maxLength: 160
+    DeleteBatchResult:
+      type: object
+      required: [deletedRecipientCount, storageCleanupPending]
+      properties:
+        deletedRecipientCount:
+          type: integer
+        storageCleanupPending:
+          type: boolean
+    BatchRecipientsInput:
+      type: object
+      required: [recipients]
+      properties:
+        recipients:
+          type: array
+          minItems: 1
+          maxItems: 5000
+          items:
+            type: string
+            minLength: 2
+            maxLength: 180
+    BatchRecipientsResult:
+      type: object
+      required: [added, skipped]
+      properties:
+        added:
+          type: integer
+        skipped:
+          type: integer
     CertificateRecipient:
       type: object
       required: [id, fullName]
@@ -427,6 +872,51 @@ components:
           format: uuid
         fullName:
           type: string
+    CertificateRecipientUpdateInput:
+      type: object
+      required: [fullName]
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 180
+    DeleteRecipientResult:
+      type: object
+      required: [deleted]
+      properties:
+        deleted:
+          type: boolean
+    CertificateNameStyle:
+      type: object
+      required: [fontFamily, textColor, fontSize, updatedAt]
+      properties:
+        fontFamily:
+          type: string
+          enum: [helvetica, helveticaBold, timesRoman, timesRomanBold, courier, courierBold]
+        textColor:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+        fontSize:
+          type: integer
+          minimum: 12
+          maximum: 72
+        updatedAt:
+          type: string
+          format: date-time
+    CertificateNameStyleInput:
+      type: object
+      required: [fontFamily, textColor, fontSize]
+      properties:
+        fontFamily:
+          type: string
+          enum: [helvetica, helveticaBold, timesRoman, timesRomanBold, courier, courierBold]
+        textColor:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+        fontSize:
+          type: integer
+          minimum: 12
+          maximum: 72
     AdminOverview:
       type: object
       required: [institutionCount, batchCount, recipientCount, downloadCount, recentBatches]

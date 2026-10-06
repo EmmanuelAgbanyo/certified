@@ -14,6 +14,7 @@ import {
 import { and, asc, eq, ilike } from "drizzle-orm";
 import { Router, type IRouter, type Request } from "express";
 import { createCertificatePdf } from "../lib/certificatePdf";
+import { getSavedCertificateNameStyle } from "../lib/certificateNameStyle";
 import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage";
 
 const router: IRouter = Router();
@@ -134,10 +135,12 @@ router.post(
     try {
       const objectFile = await objectStorageService.getObjectEntityFile(record.templatePath);
       const [template] = await objectFile.download();
+      const nameStyle = await getSavedCertificateNameStyle();
       const pdf = await createCertificatePdf(
         template,
         record.templateContentType,
         record.fullName,
+        nameStyle,
       );
       await db.insert(certificateDownloadsTable).values({ recipientId: record.recipientId });
 

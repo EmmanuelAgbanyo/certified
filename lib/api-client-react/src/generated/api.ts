@@ -21,16 +21,26 @@ import type {
 
 import type {
   AdminOverview,
+  BatchRecipientsInput,
+  BatchRecipientsResult,
   CertificateBatch,
   CertificateBatchInput,
+  CertificateBatchUpdateInput,
   CertificateDownloadInput,
   CertificateMatch,
+  CertificateNameStyle,
+  CertificateNameStyleInput,
   CertificateRecipient,
+  CertificateRecipientUpdateInput,
   CertificateSearchInput,
+  DeleteBatchResult,
+  DeleteInstitutionResult,
+  DeleteRecipientResult,
   ErrorEnvelope,
   HealthStatus,
   Institution,
   InstitutionInput,
+  InstitutionUpdateInput,
   UploadUrlRequest,
   UploadUrlResponse
 } from './api.schemas';
@@ -305,6 +315,169 @@ export const useCreateInstitution = <TError = ErrorType<ErrorEnvelope>,
       return useMutation(getCreateInstitutionMutationOptions(options));
     }
 
+export const getUpdateInstitutionUrl = (institutionId: string,) => {
+
+
+
+
+  return `/api/institutions/${institutionId}`
+}
+
+/**
+ * @summary Rename an institution
+ */
+export const updateInstitution = async (institutionId: string,
+    institutionUpdateInput: InstitutionUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<Institution> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Institution>(getUpdateInstitutionUrl(institutionId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(institutionUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateInstitutionMutationKey = () => ['updateInstitution'] as const;
+
+export const getUpdateInstitutionMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInstitution>>, TError,UpdateInstitutionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInstitution>>, TError,UpdateInstitutionMutationVariables, TContext> => {
+
+const mutationKey = getUpdateInstitutionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInstitution>>, UpdateInstitutionMutationVariables> = (props) => {
+          const {institutionId,data} = props ?? {};
+
+          return  updateInstitution(institutionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInstitutionMutationResult = NonNullable<Awaited<ReturnType<typeof updateInstitution>>>
+    export type UpdateInstitutionMutationBody = BodyType<InstitutionUpdateInput>
+    export type UpdateInstitutionMutationError = ErrorType<ErrorEnvelope>
+    export type UpdateInstitutionMutationVariables = {institutionId: string;data: BodyType<InstitutionUpdateInput>}
+
+    /**
+ * @summary Rename an institution
+ */
+export const useUpdateInstitution = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInstitution>>, TError,UpdateInstitutionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInstitution>>,
+        TError,
+        UpdateInstitutionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateInstitutionMutationOptions(options));
+    }
+
+export const getDeleteInstitutionUrl = (institutionId: string,) => {
+
+
+
+
+  return `/api/institutions/${institutionId}`
+}
+
+/**
+ * @summary Delete an institution and its certificate records
+ */
+export const deleteInstitution = async (institutionId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeleteInstitutionResult> => {
+
+  return customFetch<DeleteInstitutionResult>(getDeleteInstitutionUrl(institutionId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteInstitutionMutationKey = () => ['deleteInstitution'] as const;
+
+export const getDeleteInstitutionMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInstitution>>, TError,DeleteInstitutionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteInstitution>>, TError,DeleteInstitutionMutationVariables, TContext> => {
+
+const mutationKey = getDeleteInstitutionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteInstitution>>, DeleteInstitutionMutationVariables> = (props) => {
+          const {institutionId} = props ?? {};
+
+          return  deleteInstitution(institutionId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteInstitutionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteInstitution>>>
+
+    export type DeleteInstitutionMutationError = ErrorType<ErrorEnvelope>
+    export type DeleteInstitutionMutationVariables = {institutionId: string}
+
+    /**
+ * @summary Delete an institution and its certificate records
+ */
+export const useDeleteInstitution = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInstitution>>, TError,DeleteInstitutionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteInstitution>>,
+        TError,
+        DeleteInstitutionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteInstitutionMutationOptions(options));
+    }
+
 export const getGetAdminOverviewUrl = () => {
 
 
@@ -381,6 +554,171 @@ export function useGetAdminOverview<TData = Awaited<ReturnType<typeof getAdminOv
 
 
 
+
+export const getGetCertificateNameStyleUrl = () => {
+
+
+
+
+  return `/api/admin/certificate-name-style`
+}
+
+/**
+ * @summary Get the global certificate recipient name style
+ */
+export const getCertificateNameStyle = async ( options?: Parameters<typeof customFetch>[1]): Promise<CertificateNameStyle> => {
+
+  return customFetch<CertificateNameStyle>(getGetCertificateNameStyleUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCertificateNameStyleQueryKey = () => {
+    return [
+    `/api/admin/certificate-name-style`
+    ] as const;
+    }
+
+
+export const getGetCertificateNameStyleQueryOptions = <TData = Awaited<ReturnType<typeof getCertificateNameStyle>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCertificateNameStyle>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCertificateNameStyleQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCertificateNameStyle>>> = ({ signal }) => getCertificateNameStyle({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCertificateNameStyle>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCertificateNameStyleQueryResult = NonNullable<Awaited<ReturnType<typeof getCertificateNameStyle>>>
+export type GetCertificateNameStyleQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary Get the global certificate recipient name style
+ */
+
+export function useGetCertificateNameStyle<TData = Awaited<ReturnType<typeof getCertificateNameStyle>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCertificateNameStyle>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCertificateNameStyleQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateCertificateNameStyleUrl = () => {
+
+
+
+
+  return `/api/admin/certificate-name-style`
+}
+
+/**
+ * @summary Save the global certificate recipient name style
+ */
+export const updateCertificateNameStyle = async (certificateNameStyleInput: CertificateNameStyleInput, options?: Parameters<typeof customFetch>[1]): Promise<CertificateNameStyle> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CertificateNameStyle>(getUpdateCertificateNameStyleUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(certificateNameStyleInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateCertificateNameStyleMutationKey = () => ['updateCertificateNameStyle'] as const;
+
+export const getUpdateCertificateNameStyleMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCertificateNameStyle>>, TError,UpdateCertificateNameStyleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCertificateNameStyle>>, TError,UpdateCertificateNameStyleMutationVariables, TContext> => {
+
+const mutationKey = getUpdateCertificateNameStyleMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCertificateNameStyle>>, UpdateCertificateNameStyleMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateCertificateNameStyle(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCertificateNameStyleMutationResult = NonNullable<Awaited<ReturnType<typeof updateCertificateNameStyle>>>
+    export type UpdateCertificateNameStyleMutationBody = BodyType<CertificateNameStyleInput>
+    export type UpdateCertificateNameStyleMutationError = ErrorType<ErrorEnvelope>
+    export type UpdateCertificateNameStyleMutationVariables = {data: BodyType<CertificateNameStyleInput>}
+
+    /**
+ * @summary Save the global certificate recipient name style
+ */
+export const useUpdateCertificateNameStyle = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCertificateNameStyle>>, TError,UpdateCertificateNameStyleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCertificateNameStyle>>,
+        TError,
+        UpdateCertificateNameStyleMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateCertificateNameStyleMutationOptions(options));
+    }
 
 export const getListBatchesUrl = () => {
 
@@ -547,6 +885,169 @@ export const useCreateBatch = <TError = ErrorType<ErrorEnvelope>,
       return useMutation(getCreateBatchMutationOptions(options));
     }
 
+export const getUpdateCertificateBatchUrl = (batchId: string,) => {
+
+
+
+
+  return `/api/batches/${batchId}`
+}
+
+/**
+ * @summary Update a certificate batch title or institution
+ */
+export const updateCertificateBatch = async (batchId: string,
+    certificateBatchUpdateInput: CertificateBatchUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<CertificateBatch> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CertificateBatch>(getUpdateCertificateBatchUrl(batchId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(certificateBatchUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateCertificateBatchMutationKey = () => ['updateCertificateBatch'] as const;
+
+export const getUpdateCertificateBatchMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCertificateBatch>>, TError,UpdateCertificateBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCertificateBatch>>, TError,UpdateCertificateBatchMutationVariables, TContext> => {
+
+const mutationKey = getUpdateCertificateBatchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCertificateBatch>>, UpdateCertificateBatchMutationVariables> = (props) => {
+          const {batchId,data} = props ?? {};
+
+          return  updateCertificateBatch(batchId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCertificateBatchMutationResult = NonNullable<Awaited<ReturnType<typeof updateCertificateBatch>>>
+    export type UpdateCertificateBatchMutationBody = BodyType<CertificateBatchUpdateInput>
+    export type UpdateCertificateBatchMutationError = ErrorType<ErrorEnvelope>
+    export type UpdateCertificateBatchMutationVariables = {batchId: string;data: BodyType<CertificateBatchUpdateInput>}
+
+    /**
+ * @summary Update a certificate batch title or institution
+ */
+export const useUpdateCertificateBatch = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCertificateBatch>>, TError,UpdateCertificateBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCertificateBatch>>,
+        TError,
+        UpdateCertificateBatchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateCertificateBatchMutationOptions(options));
+    }
+
+export const getDeleteCertificateBatchUrl = (batchId: string,) => {
+
+
+
+
+  return `/api/batches/${batchId}`
+}
+
+/**
+ * @summary Delete a certificate batch and its recipients
+ */
+export const deleteCertificateBatch = async (batchId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeleteBatchResult> => {
+
+  return customFetch<DeleteBatchResult>(getDeleteCertificateBatchUrl(batchId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteCertificateBatchMutationKey = () => ['deleteCertificateBatch'] as const;
+
+export const getDeleteCertificateBatchMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCertificateBatch>>, TError,DeleteCertificateBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCertificateBatch>>, TError,DeleteCertificateBatchMutationVariables, TContext> => {
+
+const mutationKey = getDeleteCertificateBatchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCertificateBatch>>, DeleteCertificateBatchMutationVariables> = (props) => {
+          const {batchId} = props ?? {};
+
+          return  deleteCertificateBatch(batchId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCertificateBatchMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCertificateBatch>>>
+
+    export type DeleteCertificateBatchMutationError = ErrorType<ErrorEnvelope>
+    export type DeleteCertificateBatchMutationVariables = {batchId: string}
+
+    /**
+ * @summary Delete a certificate batch and its recipients
+ */
+export const useDeleteCertificateBatch = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCertificateBatch>>, TError,DeleteCertificateBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCertificateBatch>>,
+        TError,
+        DeleteCertificateBatchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteCertificateBatchMutationOptions(options));
+    }
+
 export const getListBatchRecipientsUrl = (batchId: string,) => {
 
 
@@ -623,6 +1124,262 @@ export function useListBatchRecipients<TData = Awaited<ReturnType<typeof listBat
 
 
 
+
+export const getAddBatchRecipientsUrl = (batchId: string,) => {
+
+
+
+
+  return `/api/batches/${batchId}/recipients`
+}
+
+/**
+ * @summary Add recipient names to an existing batch
+ */
+export const addBatchRecipients = async (batchId: string,
+    batchRecipientsInput: BatchRecipientsInput, options?: Parameters<typeof customFetch>[1]): Promise<BatchRecipientsResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<BatchRecipientsResult>(getAddBatchRecipientsUrl(batchId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(batchRecipientsInput)
+  }
+);}
+
+
+
+
+
+export const getAddBatchRecipientsMutationKey = () => ['addBatchRecipients'] as const;
+
+export const getAddBatchRecipientsMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addBatchRecipients>>, TError,AddBatchRecipientsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addBatchRecipients>>, TError,AddBatchRecipientsMutationVariables, TContext> => {
+
+const mutationKey = getAddBatchRecipientsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addBatchRecipients>>, AddBatchRecipientsMutationVariables> = (props) => {
+          const {batchId,data} = props ?? {};
+
+          return  addBatchRecipients(batchId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddBatchRecipientsMutationResult = NonNullable<Awaited<ReturnType<typeof addBatchRecipients>>>
+    export type AddBatchRecipientsMutationBody = BodyType<BatchRecipientsInput>
+    export type AddBatchRecipientsMutationError = ErrorType<ErrorEnvelope>
+    export type AddBatchRecipientsMutationVariables = {batchId: string;data: BodyType<BatchRecipientsInput>}
+
+    /**
+ * @summary Add recipient names to an existing batch
+ */
+export const useAddBatchRecipients = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addBatchRecipients>>, TError,AddBatchRecipientsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addBatchRecipients>>,
+        TError,
+        AddBatchRecipientsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAddBatchRecipientsMutationOptions(options));
+    }
+
+export const getUpdateBatchRecipientUrl = (batchId: string,
+    recipientId: string,) => {
+
+
+
+
+  return `/api/batches/${batchId}/recipients/${recipientId}`
+}
+
+/**
+ * @summary Rename one recipient
+ */
+export const updateBatchRecipient = async (batchId: string,
+    recipientId: string,
+    certificateRecipientUpdateInput: CertificateRecipientUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<CertificateRecipient> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CertificateRecipient>(getUpdateBatchRecipientUrl(batchId,recipientId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(certificateRecipientUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateBatchRecipientMutationKey = () => ['updateBatchRecipient'] as const;
+
+export const getUpdateBatchRecipientMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBatchRecipient>>, TError,UpdateBatchRecipientMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateBatchRecipient>>, TError,UpdateBatchRecipientMutationVariables, TContext> => {
+
+const mutationKey = getUpdateBatchRecipientMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateBatchRecipient>>, UpdateBatchRecipientMutationVariables> = (props) => {
+          const {batchId,recipientId,data} = props ?? {};
+
+          return  updateBatchRecipient(batchId,recipientId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBatchRecipientMutationResult = NonNullable<Awaited<ReturnType<typeof updateBatchRecipient>>>
+    export type UpdateBatchRecipientMutationBody = BodyType<CertificateRecipientUpdateInput>
+    export type UpdateBatchRecipientMutationError = ErrorType<ErrorEnvelope>
+    export type UpdateBatchRecipientMutationVariables = {batchId: string;recipientId: string;data: BodyType<CertificateRecipientUpdateInput>}
+
+    /**
+ * @summary Rename one recipient
+ */
+export const useUpdateBatchRecipient = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBatchRecipient>>, TError,UpdateBatchRecipientMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateBatchRecipient>>,
+        TError,
+        UpdateBatchRecipientMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateBatchRecipientMutationOptions(options));
+    }
+
+export const getDeleteBatchRecipientUrl = (batchId: string,
+    recipientId: string,) => {
+
+
+
+
+  return `/api/batches/${batchId}/recipients/${recipientId}`
+}
+
+/**
+ * @summary Delete one recipient
+ */
+export const deleteBatchRecipient = async (batchId: string,
+    recipientId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeleteRecipientResult> => {
+
+  return customFetch<DeleteRecipientResult>(getDeleteBatchRecipientUrl(batchId,recipientId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteBatchRecipientMutationKey = () => ['deleteBatchRecipient'] as const;
+
+export const getDeleteBatchRecipientMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBatchRecipient>>, TError,DeleteBatchRecipientMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteBatchRecipient>>, TError,DeleteBatchRecipientMutationVariables, TContext> => {
+
+const mutationKey = getDeleteBatchRecipientMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteBatchRecipient>>, DeleteBatchRecipientMutationVariables> = (props) => {
+          const {batchId,recipientId} = props ?? {};
+
+          return  deleteBatchRecipient(batchId,recipientId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteBatchRecipientMutationResult = NonNullable<Awaited<ReturnType<typeof deleteBatchRecipient>>>
+
+    export type DeleteBatchRecipientMutationError = ErrorType<ErrorEnvelope>
+    export type DeleteBatchRecipientMutationVariables = {batchId: string;recipientId: string}
+
+    /**
+ * @summary Delete one recipient
+ */
+export const useDeleteBatchRecipient = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBatchRecipient>>, TError,DeleteBatchRecipientMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteBatchRecipient>>,
+        TError,
+        DeleteBatchRecipientMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteBatchRecipientMutationOptions(options));
+    }
 
 export const getSearchCertificatesUrl = () => {
 

@@ -2,6 +2,7 @@ export * from "./institutions";
 export * from "./certificate-batches";
 export * from "./certificate-recipients";
 export * from "./certificate-downloads";
+export * from "./certificate-name-style";
 
 // Export your models here. Add one export per file
 // export * from "./posts";
