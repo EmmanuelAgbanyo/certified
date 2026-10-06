@@ -1,3 +1,8 @@
+export * from "./institutions";
+export * from "./certificate-batches";
+export * from "./certificate-recipients";
+export * from "./certificate-downloads";
+
 // Export your models here. Add one export per file
 // export * from "./posts";
 //

@@ -10,6 +10,16 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: institutions
+    description: Certificate-issuing institutions.
+  - name: batches
+    description: Certificate batches and recipient management.
+  - name: certificates
+    description: Recipient certificate search and download.
+  - name: admin
+    description: Administrator overview.
+  - name: storage
+    description: Private template file upload.
 paths:
   /healthz:
     get:
@@ -24,6 +34,300 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /institutions:
+    get:
+      operationId: listInstitutions
+      tags: [institutions]
+      summary: List institutions available to recipients
+      responses:
+        "200":
+          description: Institutions with available certificate counts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Institution"
+    post:
+      operationId: createInstitution
+      tags: [institutions]
+      summary: Add an institution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstitutionInput"
+      responses:
+        "201":
+          description: Institution created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Institution"
+        "400":
+          description: Invalid institution details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: Institution name already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/overview:
+    get:
+      operationId: getAdminOverview
+      tags: [admin]
+      summary: Get certificate portal totals and recent batches
+      responses:
+        "200":
+          description: Summary for the administrator dashboard.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOverview"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /batches:
+    get:
+      operationId: listBatches
+      tags: [batches]
+      summary: List certificate batches for the administrator
+      responses:
+        "200":
+          description: Certificate batches.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CertificateBatch"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    post:
+      operationId: createBatch
+      tags: [batches]
+      summary: Create a certificate batch and import its recipients
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertificateBatchInput"
+      responses:
+        "201":
+          description: Batch created with recipient names imported.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateBatch"
+        "400":
+          description: Invalid batch, template, or recipient data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /batches/{batchId}/recipients:
+    get:
+      operationId: listBatchRecipients
+      tags: [batches]
+      summary: List the recipient names in a certificate batch
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Recipient names for the selected batch.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CertificateRecipient"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Batch not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /certificates/search:
+    post:
+      operationId: searchCertificates
+      tags: [certificates]
+      summary: Find certificates belonging to an exact recipient name
+      description: |
+        Matches a full name within the selected institution. Does not return
+        suggestions or other recipients' names.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertificateSearchInput"
+      responses:
+        "200":
+          description: Matching certificates; an empty array means no match.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CertificateMatch"
+        "400":
+          description: Invalid search request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "429":
+          description: Too many searches. Try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /certificates/{recipientId}/download:
+    post:
+      operationId: downloadCertificate
+      tags: [certificates]
+      summary: Generate and download one recipient's certificate as a PDF
+      parameters:
+        - name: recipientId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertificateDownloadInput"
+      responses:
+        "200":
+          description: Generated certificate PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Certificate not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "429":
+          description: Too many requests. Try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a private upload URL for a certificate template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Invalid upload details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Sign-in required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Administrator access required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +337,166 @@ components:
           type: string
       required:
         - status
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    Institution:
+      type: object
+      required: [id, name, batchCount, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        batchCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+    InstitutionInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 160
+    CertificateBatch:
+      type: object
+      required: [id, institutionId, institutionName, title, templateFilename, templateContentType, recipientCount, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        institutionId:
+          type: string
+          format: uuid
+        institutionName:
+          type: string
+        title:
+          type: string
+        templateFilename:
+          type: string
+        templateContentType:
+          type: string
+        recipientCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+    CertificateBatchInput:
+      type: object
+      required: [institutionId, title, templatePath, templateFilename, templateContentType, recipients]
+      properties:
+        institutionId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 2
+          maxLength: 160
+        templatePath:
+          type: string
+          minLength: 1
+          description: Private object path returned by the upload URL endpoint.
+        templateFilename:
+          type: string
+          minLength: 1
+          maxLength: 255
+        templateContentType:
+          type: string
+          enum: [application/pdf, image/png, image/jpeg]
+        recipients:
+          type: array
+          minItems: 1
+          maxItems: 5000
+          items:
+            type: string
+            minLength: 2
+            maxLength: 180
+    CertificateRecipient:
+      type: object
+      required: [id, fullName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+    AdminOverview:
+      type: object
+      required: [institutionCount, batchCount, recipientCount, downloadCount, recentBatches]
+      properties:
+        institutionCount:
+          type: integer
+        batchCount:
+          type: integer
+        recipientCount:
+          type: integer
+        downloadCount:
+          type: integer
+        recentBatches:
+          type: array
+          items:
+            $ref: "#/components/schemas/CertificateBatch"
+    CertificateSearchInput:
+      type: object
+      required: [institutionId, fullName]
+      properties:
+        institutionId:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 180
+    CertificateMatch:
+      type: object
+      required: [id, institutionName, batchTitle, fullName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        institutionName:
+          type: string
+        batchTitle:
+          type: string
+        fullName:
+          type: string
+    CertificateDownloadInput:
+      type: object
+      required: [fullName]
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 180
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        size:
+          type: integer
+          minimum: 1
+          maximum: 20000000
+        contentType:
+          type: string
+          enum: [application/pdf, image/png, image/jpeg]
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
 
