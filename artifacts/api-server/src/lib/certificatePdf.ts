@@ -48,7 +48,7 @@ export async function createCertificatePdf(
   const green = Number.parseInt(hexColor.slice(2, 4), 16) / 255;
   const blue = Number.parseInt(hexColor.slice(4, 6), 16) / 255;
   page.drawText(recipientName, {
-    x: (width - textWidth) / 2,
+    x: width * 0.1,
     y: height * 0.42,
     size: fontSize,
     font,
