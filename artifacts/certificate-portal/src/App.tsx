@@ -52,6 +52,7 @@ import {
   useListInstitutions,
   useRequestUploadUrl,
   useSearchCertificates,
+  useVerifyCertificate,
   useUpdateBatchRecipient,
   useUpdateCertificateBatch,
   useUpdateCertificateNameStyle,
@@ -72,6 +73,8 @@ const clerkProxyUrl = import.meta.env.DEV
     `${window.location.origin}${basePath}/api/__clerk`;
 const stripBase = (path: string) =>
   basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path;
+const normalizeInstitutionInput = (value: string) =>
+  value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
 
 const appearance = {
   theme: shadcn,
@@ -140,14 +143,24 @@ function SiteHeader() {
 function HomePage() {
   const institutionsQuery = useListInstitutions();
   const search = useSearchCertificates();
+  const verify = useVerifyCertificate();
   const download = useDownloadCertificate();
   const [institutionId, setInstitutionId] = useState('');
   const [nameQuery, setNameQuery] = useState('');
+  const [verificationOpen, setVerificationOpen] = useState(false);
+  const [verificationInstitution, setVerificationInstitution] = useState('');
+  const [verificationFullName, setVerificationFullName] = useState('');
   const [downloadError, setDownloadError] = useState('');
   const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
   const [previewPendingId, setPreviewPendingId] = useState<string | null>(null);
   const institutions = institutionsQuery.data ?? [];
   const matches = search.data ?? [];
+  const verificationMatches = verify.data ?? [];
+  const matchedVerificationInstitution = institutions.find(
+    (institution) =>
+      normalizeInstitutionInput(institution.name) ===
+      normalizeInstitutionInput(verificationInstitution),
+  );
 
   useEffect(() => {
     if (!preview) return;
@@ -160,6 +173,19 @@ function HomePage() {
     setDownloadError('');
     setPreview(null);
     search.mutate({ data: { institutionId, name: nameQuery.trim() } });
+  }
+
+  function submitVerification(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!matchedVerificationInstitution || verificationFullName.trim().length < 2) return;
+    setDownloadError('');
+    setPreview(null);
+    verify.mutate({
+      data: {
+        institutionId: matchedVerificationInstitution.id,
+        fullName: verificationFullName.trim(),
+      },
+    });
   }
 
   async function viewCertificate(id: string, name: string) {
@@ -333,6 +359,159 @@ function HomePage() {
                 )}
               </div>
             )}
+
+            <section className="mt-7 border-t border-[#e9e3d7] pt-6" aria-labelledby="verification-heading">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h3 id="verification-heading" className="text-sm font-semibold text-[#304a3f]">Can’t find your certificate?</h3>
+                  <p className="mt-1 max-w-[620px] text-sm leading-6 text-[#718078]">
+                    Check your full name against the recipient list uploaded by your institution.
+                  </p>
+                </div>
+                <button
+                  className="secondary-button justify-center"
+                  type="button"
+                  onClick={() => setVerificationOpen((open) => !open)}
+                  aria-expanded={verificationOpen}
+                  aria-controls="certificate-verification-form"
+                  data-testid="button-toggle-certificate-verification"
+                >
+                  {verificationOpen ? 'Close form' : 'Verify full name'}
+                </button>
+              </div>
+
+              {verificationOpen && (
+                <div id="certificate-verification-form" className="mt-5">
+                  <form onSubmit={submitVerification} className="grid gap-4 md:grid-cols-[1fr_1.2fr_auto] md:items-end">
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-semibold text-[#334d43]">Institution</span>
+                      <input
+                        type="text"
+                        list="verification-institution-options"
+                        value={verificationInstitution}
+                        onChange={(event) => {
+                          setVerificationInstitution(event.target.value);
+                          verify.reset();
+                        }}
+                        className="form-control"
+                        placeholder="Start typing your institution"
+                        autoComplete="organization"
+                        aria-describedby="verification-institution-help"
+                        data-testid="input-verification-institution"
+                        required
+                        disabled={institutionsQuery.isLoading || institutions.length === 0}
+                      />
+                      <datalist id="verification-institution-options">
+                        {institutions.map((institution) => (
+                          <option key={institution.id} value={institution.name} />
+                        ))}
+                      </datalist>
+                      <span id="verification-institution-help" className="mt-2 block text-xs text-[#77837b]">
+                        {verificationInstitution.trim() && !matchedVerificationInstitution
+                          ? 'Choose an institution from the suggestions.'
+                          : 'Choose a name from the suggestions so it matches the institution records.'}
+                      </span>
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-semibold text-[#334d43]">Full name</span>
+                      <input
+                        value={verificationFullName}
+                        onChange={(event) => {
+                          setVerificationFullName(event.target.value);
+                          verify.reset();
+                        }}
+                        className="form-control"
+                        placeholder="Enter your name as it appears on the certificate"
+                        autoComplete="name"
+                        minLength={2}
+                        maxLength={180}
+                        required
+                        data-testid="input-verification-full-name"
+                      />
+                    </label>
+                    <button
+                      className="primary-button min-h-[46px] justify-center md:min-w-[144px]"
+                      type="submit"
+                      disabled={
+                        verify.isPending ||
+                        !matchedVerificationInstitution ||
+                        verificationFullName.trim().length < 2
+                      }
+                      data-testid="button-verify-certificate"
+                    >
+                      {verify.isPending ? 'Checking…' : <>Check records <ArrowRight size={15} /></>}
+                    </button>
+                  </form>
+
+                  {verify.isError && (
+                    <p className="mt-4 flex items-center gap-2 text-sm text-[#a54237]" role="alert" data-testid="status-verification-error">
+                      <CircleAlert size={16} /> We couldn’t check the uploaded records just now. Please wait a moment and try again.
+                    </p>
+                  )}
+
+                  {verify.isSuccess && (
+                    <div className="mt-5 border-t border-[#e9e3d7] pt-5" data-testid="region-exact-verification">
+                      {verificationMatches.length ? (
+                        <>
+                          <div className="mb-3">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-[#244a3e]">
+                              <Check size={16} /> Certificate record verified
+                            </div>
+                            <p className="mt-1 text-xs text-[#77837b]">
+                              Select the certificate you want from {matchedVerificationInstitution?.name}.
+                            </p>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {verificationMatches.map((match) => (
+                              <article className="match-card" key={match.id} data-testid={`card-verified-certificate-${match.id}`}>
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#edf1e7] text-[#416951]"><FileText size={19} /></span>
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-sm font-semibold text-[#233f36]">{match.fullName}</span>
+                                    <span className="mt-1 block truncate text-xs text-[#748078]">{match.institutionName} · {match.batchTitle}</span>
+                                  </span>
+                                </div>
+                                <div className="mt-4 grid grid-cols-2 gap-2">
+                                  <button
+                                    className="secondary-button justify-center"
+                                    type="button"
+                                    onClick={() => viewCertificate(match.id, match.fullName)}
+                                    disabled={download.isPending}
+                                    data-testid={`button-verify-view-${match.id}`}
+                                  >
+                                    <Eye size={15} /> {previewPendingId === match.id ? 'Opening…' : 'View'}
+                                  </button>
+                                  <button
+                                    className="download-button justify-center"
+                                    type="button"
+                                    onClick={() => downloadCertificate(match.id, match.fullName)}
+                                    disabled={download.isPending}
+                                    data-testid={`button-verify-download-${match.id}`}
+                                  >
+                                    <ArrowDownToLine size={15} /> {download.isPending && previewPendingId !== match.id ? 'Preparing…' : 'Download PDF'}
+                                  </button>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                          {downloadError && <p className="mt-3 text-sm text-[#a54237]" role="alert" data-testid="status-download-error">{downloadError}</p>}
+                        </>
+                      ) : (
+                        <div className="flex gap-4 rounded-xl bg-[#f5f2e9] p-5" role="status" data-testid="status-verified-no-match">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ece6d5] text-[#947a3e]"><Search size={18} /></span>
+                          <div>
+                            <h4 className="text-sm font-semibold text-[#304a3f]">No exact record found</h4>
+                            <p className="mt-1 max-w-[620px] text-sm leading-6 text-[#718078]">
+                              Check the spelling and institution. If your name is still missing, contact the institution so its administrator can add your recipient record.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
           </div>
         </section>
 

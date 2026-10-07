@@ -642,6 +642,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /certificates/verify:
+    post:
+      operationId: verifyCertificate
+      tags: [certificates]
+      summary: Verify an exact recipient name within an institution
+      description: |
+        Matches the full recipient name after normalizing whitespace and letter
+        case. Returns up to 20 matching certificates when the recipient appears
+        in multiple batches for the selected institution.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertificateVerificationInput"
+      responses:
+        "200":
+          description: Exact certificate matches; an empty array means no match.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CertificateMatch"
+        "400":
+          description: Invalid verification request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "429":
+          description: Too many verification attempts. Try again later.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /certificates/{recipientId}/download:
     post:
       operationId: downloadCertificate
@@ -947,6 +983,17 @@ components:
           type: string
           format: uuid
         name:
+          type: string
+          minLength: 2
+          maxLength: 180
+    CertificateVerificationInput:
+      type: object
+      required: [institutionId, fullName]
+      properties:
+        institutionId:
+          type: string
+          format: uuid
+        fullName:
           type: string
           minLength: 2
           maxLength: 180

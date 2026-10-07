@@ -22,6 +22,7 @@ export * from './certificateNameStyleInputFontFamily';
 export * from './certificateRecipient';
 export * from './certificateRecipientUpdateInput';
 export * from './certificateSearchInput';
+export * from './certificateVerificationInput';
 export * from './deleteBatchResult';
 export * from './deleteInstitutionResult';
 export * from './deleteRecipientResult';

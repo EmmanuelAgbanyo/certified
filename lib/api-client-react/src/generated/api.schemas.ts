@@ -199,6 +199,15 @@ export interface CertificateSearchInput {
   name: string;
 }
 
+export interface CertificateVerificationInput {
+  institutionId: string;
+  /**
+     * @minLength 2
+     * @maxLength 180
+     */
+  fullName: string;
+}
+
 export interface CertificateMatch {
   id: string;
   institutionName: string;

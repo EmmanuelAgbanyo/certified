@@ -33,6 +33,7 @@ import type {
   CertificateRecipient,
   CertificateRecipientUpdateInput,
   CertificateSearchInput,
+  CertificateVerificationInput,
   DeleteBatchResult,
   DeleteInstitutionResult,
   DeleteRecipientResult,
@@ -1469,6 +1470,97 @@ export const useSearchCertificates = <TError = ErrorType<ErrorEnvelope>,
         TContext
       > => {
       return useMutation(getSearchCertificatesMutationOptions(options));
+    }
+
+export const getVerifyCertificateUrl = () => {
+
+
+
+
+  return `/api/certificates/verify`
+}
+
+/**
+ * Matches the full recipient name after normalizing whitespace and letter
+ * case. Returns up to 20 matching certificates when the recipient appears
+ * in multiple batches for the selected institution.
+ * @summary Verify an exact recipient name within an institution
+ */
+export const verifyCertificate = async (certificateVerificationInput: CertificateVerificationInput, options?: Parameters<typeof customFetch>[1]): Promise<CertificateMatch[]> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CertificateMatch[]>(getVerifyCertificateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(certificateVerificationInput)
+  }
+);}
+
+
+
+
+
+export const getVerifyCertificateMutationKey = () => ['verifyCertificate'] as const;
+
+export const getVerifyCertificateMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyCertificate>>, TError,VerifyCertificateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyCertificate>>, TError,VerifyCertificateMutationVariables, TContext> => {
+
+const mutationKey = getVerifyCertificateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyCertificate>>, VerifyCertificateMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  verifyCertificate(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyCertificateMutationResult = NonNullable<Awaited<ReturnType<typeof verifyCertificate>>>
+    export type VerifyCertificateMutationBody = BodyType<CertificateVerificationInput>
+    export type VerifyCertificateMutationError = ErrorType<ErrorEnvelope>
+    export type VerifyCertificateMutationVariables = {data: BodyType<CertificateVerificationInput>}
+
+    /**
+ * @summary Verify an exact recipient name within an institution
+ */
+export const useVerifyCertificate = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyCertificate>>, TError,VerifyCertificateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifyCertificate>>,
+        TError,
+        VerifyCertificateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getVerifyCertificateMutationOptions(options));
     }
 
 export const getDownloadCertificateUrl = (recipientId: string,) => {

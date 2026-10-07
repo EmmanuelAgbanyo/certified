@@ -348,6 +348,31 @@ export const SearchCertificatesResponse = zod.array(SearchCertificatesResponseIt
 
 
 /**
+ * Matches the full recipient name after normalizing whitespace and letter
+ * case. Returns up to 20 matching certificates when the recipient appears
+ * in multiple batches for the selected institution.
+ * @summary Verify an exact recipient name within an institution
+ */
+export const verifyCertificateBodyFullNameMin = 2;
+export const verifyCertificateBodyFullNameMax = 180;
+
+
+
+export const VerifyCertificateBody = zod.object({
+  "institutionId": zod.string().uuid(),
+  "fullName": zod.string().min(verifyCertificateBodyFullNameMin).max(verifyCertificateBodyFullNameMax)
+})
+
+export const VerifyCertificateResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "institutionName": zod.string(),
+  "batchTitle": zod.string(),
+  "fullName": zod.string()
+})
+export const VerifyCertificateResponse = zod.array(VerifyCertificateResponseItem)
+
+
+/**
  * @summary Generate and download one recipient's certificate as a PDF
  */
 export const DownloadCertificateParams = zod.object({

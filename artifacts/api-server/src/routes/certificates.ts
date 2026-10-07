@@ -3,6 +3,8 @@ import {
   DownloadCertificateParams,
   SearchCertificatesBody,
   SearchCertificatesResponse,
+  VerifyCertificateBody,
+  VerifyCertificateResponse,
 } from "@workspace/api-zod";
 import {
   certificateBatchesTable,
@@ -89,6 +91,46 @@ router.post("/certificates/search", async (req, res): Promise<void> => {
     .limit(20);
 
   res.json(SearchCertificatesResponse.parse(rows));
+});
+
+router.post("/certificates/verify", async (req, res): Promise<void> => {
+  if (!allowRequest(req)) {
+    res.status(429).json({ error: "Too many verification attempts. Please try again in a minute." });
+    return;
+  }
+
+  const parsed = VerifyCertificateBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Select an institution and enter your full name." });
+    return;
+  }
+
+  const rows = await db
+    .select({
+      id: certificateRecipientsTable.id,
+      institutionName: institutionsTable.name,
+      batchTitle: certificateBatchesTable.title,
+      fullName: certificateRecipientsTable.fullName,
+    })
+    .from(certificateRecipientsTable)
+    .innerJoin(
+      certificateBatchesTable,
+      eq(certificateRecipientsTable.batchId, certificateBatchesTable.id),
+    )
+    .innerJoin(
+      institutionsTable,
+      eq(certificateBatchesTable.institutionId, institutionsTable.id),
+    )
+    .where(
+      and(
+        eq(institutionsTable.id, parsed.data.institutionId),
+        eq(certificateRecipientsTable.normalizedName, normalizeName(parsed.data.fullName)),
+      ),
+    )
+    .orderBy(asc(certificateBatchesTable.title), asc(certificateRecipientsTable.fullName))
+    .limit(20);
+
+  res.json(VerifyCertificateResponse.parse(rows));
 });
 
 router.post(
