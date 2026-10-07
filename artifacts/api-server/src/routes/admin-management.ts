@@ -23,7 +23,6 @@ import {
 } from "@workspace/api-zod";
 import {
   certificateBatchesTable,
-  certificateDownloadsTable,
   certificateNameStyleTable,
   certificateRecipientsTable,
   db,

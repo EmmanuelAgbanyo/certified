@@ -498,6 +498,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: The batch would exceed the maximum recipient count.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /batches/{batchId}/recipients/{recipientId}:
     patch:
       operationId: updateBatchRecipient

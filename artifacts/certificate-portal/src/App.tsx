@@ -15,6 +15,10 @@ import {
   Check,
   ChevronDown,
   CircleAlert,
+  Pencil,
+  Trash2,
+  Users,
+  Save,
   Eye,
   FileImage,
   FileText,
@@ -30,16 +34,28 @@ import {
 } from 'lucide-react';
 import {
   getGetAdminOverviewQueryKey,
+  getGetCertificateNameStyleQueryKey,
+  getListBatchRecipientsQueryKey,
   getListBatchesQueryKey,
   getListInstitutionsQueryKey,
+  useAddBatchRecipients,
   useCreateBatch,
   useCreateInstitution,
+  useDeleteBatchRecipient,
+  useDeleteCertificateBatch,
+  useDeleteInstitution,
   useDownloadCertificate,
   useGetAdminOverview,
+  useGetCertificateNameStyle,
+  useListBatchRecipients,
   useListBatches,
   useListInstitutions,
   useRequestUploadUrl,
   useSearchCertificates,
+  useUpdateBatchRecipient,
+  useUpdateCertificateBatch,
+  useUpdateCertificateNameStyle,
+  useUpdateInstitution,
 } from '@workspace/api-client-react';
 import { Route, Switch, Link, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
@@ -406,9 +422,18 @@ function AdminPage() {
   const overviewQuery = useGetAdminOverview({ query: { enabled: isSignedIn === true, queryKey: getGetAdminOverviewQueryKey() } });
   const institutionsQuery = useListInstitutions({ query: { enabled: isSignedIn === true, queryKey: getListInstitutionsQueryKey() } });
   const batchesQuery = useListBatches({ query: { enabled: isSignedIn === true, queryKey: getListBatchesQueryKey() } });
+  const styleQuery = useGetCertificateNameStyle({ query: { enabled: isSignedIn === true, queryKey: getGetCertificateNameStyleQueryKey() } });
   const createInstitution = useCreateInstitution();
   const createBatch = useCreateBatch();
   const requestUpload = useRequestUploadUrl();
+  const updateInstitution = useUpdateInstitution();
+  const deleteInstitution = useDeleteInstitution();
+  const updateBatch = useUpdateCertificateBatch();
+  const deleteBatch = useDeleteCertificateBatch();
+  const addRecipients = useAddBatchRecipients();
+  const updateRecipient = useUpdateBatchRecipient();
+  const deleteRecipient = useDeleteBatchRecipient();
+  const updateNameStyle = useUpdateCertificateNameStyle();
   const [institutionName, setInstitutionName] = useState('');
   const [batchTitle, setBatchTitle] = useState('');
   const [selectedInstitution, setSelectedInstitution] = useState('');
@@ -417,8 +442,157 @@ function AdminPage() {
   const [template, setTemplate] = useState<File | null>(null);
   const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [institutionSearch, setInstitutionSearch] = useState('');
+  const [editingInstitution, setEditingInstitution] = useState<string | null>(null);
+  const [institutionDraft, setInstitutionDraft] = useState('');
+  const [editingBatch, setEditingBatch] = useState<string | null>(null);
+  const [batchDraft, setBatchDraft] = useState({ title: '', institutionId: '' });
+  const [selectedBatchForRecipients, setSelectedBatchForRecipients] = useState('');
+  const [newRecipientNames, setNewRecipientNames] = useState('');
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const [editingRecipient, setEditingRecipient] = useState<string | null>(null);
+  const [recipientDraft, setRecipientDraft] = useState('');
+  const [nameStyleDraft, setNameStyleDraft] = useState({ fontFamily: 'helvetica', textColor: '#203c35', fontSize: 28 });
+  const [styleInitialized, setStyleInitialized] = useState(false);
+  const [managementError, setManagementError] = useState('');
+  const [managementSuccess, setManagementSuccess] = useState('');
+  const recipientsQuery = useListBatchRecipients(selectedBatchForRecipients, { query: { enabled: !!selectedBatchForRecipients && isSignedIn === true, queryKey: getListBatchRecipientsQueryKey(selectedBatchForRecipients) } });
   const institutions = institutionsQuery.data ?? [];
   const overview = overviewQuery.data;
+
+  useEffect(() => {
+    if (styleQuery.data && !styleInitialized) {
+      setNameStyleDraft({ fontFamily: styleQuery.data.fontFamily, textColor: styleQuery.data.textColor, fontSize: styleQuery.data.fontSize });
+      setStyleInitialized(true);
+    }
+  }, [styleQuery.data, styleInitialized]);
+
+  async function refreshManagement() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: getListInstitutionsQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getListBatchesQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getGetAdminOverviewQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getGetCertificateNameStyleQueryKey() }),
+    ]);
+  }
+
+  async function renameInstitution(id: string) {
+    const name = institutionDraft.trim();
+    if (name.length < 2) return setManagementError('Institution names must be at least 2 characters.');
+    setManagementError(''); setManagementSuccess('');
+    try {
+      await updateInstitution.mutateAsync({ institutionId: id, data: { name } });
+      setEditingInstitution(null); await refreshManagement(); setManagementSuccess('Institution renamed.');
+    } catch { setManagementError('Could not rename this institution. Please try again.'); }
+  }
+
+  async function removeInstitution(id: string, name: string) {
+    if (!window.confirm(`Delete “${name}” and all of its records? This removes its batches, recipients, download history and template files. This cannot be undone.`)) return;
+    setManagementError(''); setManagementSuccess('');
+    try {
+      const result = await deleteInstitution.mutateAsync({ institutionId: id });
+      if (selectedBatchForRecipients) {
+        setSelectedBatchForRecipients('');
+        setNewRecipientNames('');
+        setRecipientSearch('');
+      }
+      if (selectedInstitution === id) setSelectedInstitution('');
+      await refreshManagement();
+      setManagementSuccess(result.storageCleanupPending
+        ? 'Institution records were deleted, but one or more private template files could not be removed from storage.'
+        : 'Institution and related records deleted.');
+    } catch { setManagementError('Could not delete this institution. Please try again.'); }
+  }
+
+  async function saveBatch(batchId: string) {
+    if (batchDraft.title.trim().length < 2 || !batchDraft.institutionId) return setManagementError('Choose an institution and enter a batch title of at least 2 characters.');
+    setManagementError(''); setManagementSuccess('');
+    try {
+      await updateBatch.mutateAsync({ batchId, data: { institutionId: batchDraft.institutionId, title: batchDraft.title.trim() } });
+      setEditingBatch(null); await refreshManagement(); setManagementSuccess('Batch details updated.');
+    } catch { setManagementError('Could not update this batch. Please try again.'); }
+  }
+
+  async function removeBatch(batchId: string, title: string) {
+    if (!window.confirm(`Delete “${title}”? This removes its recipients, download history and template file. This cannot be undone.`)) return;
+    setManagementError(''); setManagementSuccess('');
+    try {
+      const result = await deleteBatch.mutateAsync({ batchId });
+      if (selectedBatchForRecipients === batchId) {
+        setSelectedBatchForRecipients('');
+        setNewRecipientNames('');
+        setRecipientSearch('');
+      }
+      await refreshManagement();
+      setManagementSuccess(result.storageCleanupPending
+        ? 'Batch records were deleted, but its private template file could not be removed from storage.'
+        : 'Batch and related records deleted.');
+    } catch { setManagementError('Could not delete this batch. Please try again.'); }
+  }
+
+  async function submitAdditionalRecipients(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const recipients = newRecipientNames.split(/\r?\n/).map((name) => name.trim()).filter(Boolean);
+    if (!selectedBatchForRecipients || !recipients.length || recipients.some((name) => name.length < 2 || name.length > 180)) {
+      setManagementError('Enter one or more full names, each between 2 and 180 characters.');
+      return;
+    }
+    if (recipients.length > 5000) {
+      setManagementError('Add no more than 5,000 names at a time.');
+      return;
+    }
+    setManagementError(''); setManagementSuccess('');
+    try {
+      const result = await addRecipients.mutateAsync({ batchId: selectedBatchForRecipients, data: { recipients } });
+      setNewRecipientNames('');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getListBatchRecipientsQueryKey(selectedBatchForRecipients) }),
+        queryClient.invalidateQueries({ queryKey: getListBatchesQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getListInstitutionsQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetAdminOverviewQueryKey() }),
+      ]);
+      setManagementSuccess(`${result.added} recipient${result.added === 1 ? '' : 's'} added${result.skipped ? `; ${result.skipped} duplicate${result.skipped === 1 ? '' : 's'} skipped` : ''}.`);
+    } catch { setManagementError('Could not add these recipients. Please try again.'); }
+  }
+
+  async function saveRecipient(recipientId: string) {
+    const fullName = recipientDraft.trim();
+    if (fullName.length < 2 || fullName.length > 180) return setManagementError('Full name must be between 2 and 180 characters.');
+    setManagementError(''); setManagementSuccess('');
+    try {
+      await updateRecipient.mutateAsync({ batchId: selectedBatchForRecipients, recipientId, data: { fullName } });
+      setEditingRecipient(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getListBatchRecipientsQueryKey(selectedBatchForRecipients) }),
+        queryClient.invalidateQueries({ queryKey: getListBatchesQueryKey() }),
+      ]);
+      setManagementSuccess('Recipient name updated.');
+    } catch { setManagementError('Could not update this recipient. Please try again.'); }
+  }
+
+  async function removeRecipient(recipientId: string, fullName: string) {
+    if (!window.confirm(`Delete “${fullName}”? This removes the recipient and their download history. This cannot be undone.`)) return;
+    setManagementError(''); setManagementSuccess('');
+    try {
+      await deleteRecipient.mutateAsync({ batchId: selectedBatchForRecipients, recipientId });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getListBatchRecipientsQueryKey(selectedBatchForRecipients) }),
+        queryClient.invalidateQueries({ queryKey: getListBatchesQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetAdminOverviewQueryKey() }),
+      ]);
+      setManagementSuccess('Recipient and download history deleted.');
+    } catch { setManagementError('Could not delete this recipient. Please try again.'); }
+  }
+
+  async function saveNameStyle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setManagementError(''); setManagementSuccess('');
+    if (!/^#[0-9a-fA-F]{6}$/.test(nameStyleDraft.textColor)) return setManagementError('Use a six-digit hex color, such as #203c35.');
+    try {
+      await updateNameStyle.mutateAsync({ data: { fontFamily: nameStyleDraft.fontFamily as 'helvetica' | 'helveticaBold' | 'timesRoman' | 'timesRomanBold' | 'courier' | 'courierBold', textColor: nameStyleDraft.textColor, fontSize: Number(nameStyleDraft.fontSize) } });
+      await queryClient.invalidateQueries({ queryKey: getGetCertificateNameStyleQueryKey() });
+      setManagementSuccess('Global certificate name style saved.');
+    } catch { setManagementError('Could not save the certificate name style. Please try again.'); }
+  }
 
   async function importNamesFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -594,6 +768,9 @@ function AdminPage() {
   }
 
   const busy = createBatch.isPending || requestUpload.isPending;
+  const filteredInstitutions = institutions.filter((institution) => institution.name.toLowerCase().includes(institutionSearch.trim().toLowerCase()));
+  const filteredRecipients = (recipientsQuery.data ?? []).filter((recipient) => recipient.fullName.toLowerCase().includes(recipientSearch.trim().toLowerCase()));
+  const selectedBatch = batchesQuery.data?.find((batch) => batch.id === selectedBatchForRecipients);
   return (
     <div className="admin-frame min-h-[100dvh]">
       <header className="admin-topbar">
@@ -604,7 +781,7 @@ function AdminPage() {
       </header>
       <main className="page-width pb-16 pt-9 sm:pt-12">
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div className="rise-in"><p className="eyebrow"><span className="eyebrow-mark" /> Portal overview</p><h1 className="serif mt-3 text-[34px] tracking-[-.05em] text-[#203c35]">Good day, administrator.</h1><p className="mt-2 text-sm text-[#758078]">Manage institutions and publish new certificate batches.</p></div>
+          <div className="rise-in"><p className="eyebrow"><span className="eyebrow-mark" /> Portal overview</p><h1 className="serif mt-3 text-[34px] tracking-[-.05em] text-[#203c35]">Good day, administrator.</h1><p className="mt-2 text-sm text-[#758078]">Manage institutions, certificate batches, recipients and certificate name styling.</p></div>
           <div className="rounded-lg border border-[#e1dbce] bg-[#fffdf8] px-4 py-3 text-xs text-[#718078]"><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#5e9872]" /> Signed in · admin access is enforced by the portal</div>
         </div>
 
@@ -618,6 +795,7 @@ function AdminPage() {
         )}
 
         {(formError || successMessage) && <div className={`mt-6 flex items-start gap-2 rounded-lg p-3.5 text-sm ${formError ? 'border border-[#ecd2cc] bg-[#fbf0ed] text-[#9a473a]' : 'border border-[#d3e3d5] bg-[#edf5ed] text-[#346348]'}`} role={formError ? 'alert' : 'status'} data-testid={formError ? 'status-admin-error' : 'status-admin-success'}>{formError ? <CircleAlert size={17} className="mt-0.5 shrink-0" /> : <Check size={17} className="mt-0.5 shrink-0" />}{formError || successMessage}</div>}
+        {(managementError || managementSuccess) && <div className={`mt-3 flex items-start gap-2 rounded-lg p-3.5 text-sm ${managementError ? 'border border-[#ecd2cc] bg-[#fbf0ed] text-[#9a473a]' : 'border border-[#d3e3d5] bg-[#edf5ed] text-[#346348]'}`} role={managementError ? 'alert' : 'status'} data-testid={managementError ? 'status-management-error' : 'status-management-success'}>{managementError ? <CircleAlert size={17} className="mt-0.5 shrink-0" /> : <Check size={17} className="mt-0.5 shrink-0" />}{managementError || managementSuccess}</div>}
 
         <div className="mt-8 grid items-start gap-6 xl:grid-cols-[.84fr_1.16fr]">
           <section className="admin-card" aria-labelledby="institutions-heading">
@@ -630,11 +808,21 @@ function AdminPage() {
               </button>
             </form>
             <div className="mt-7 border-t border-[#ebe5da] pt-5">
-              <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-bold uppercase tracking-[.12em] text-[#718078]">Your institutions</h3><span className="rounded-full bg-[#f0ede4] px-2 py-1 text-[10px] font-semibold text-[#66756c]">{institutions.length}</span></div>
+              <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-bold uppercase tracking-[.12em] text-[#718078]">Your institutions</h3><span className="rounded-full bg-[#f0ede4] px-2 py-1 text-[10px] font-semibold text-[#66756c]" data-testid="text-institution-count">{institutions.length}</span></div>
+              <label className="relative mb-3 block"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#859087]" /><input className="form-control pl-9" value={institutionSearch} onChange={(event) => setInstitutionSearch(event.target.value)} placeholder="Search institutions" aria-label="Search institutions" data-testid="input-institution-search" /></label>
               {institutionsQuery.isLoading ? <div className="space-y-2"><div className="h-12 animate-pulse rounded-lg bg-[#f0ede5]" /><div className="h-12 animate-pulse rounded-lg bg-[#f0ede5]" /></div>
                 : institutionsQuery.isError ? <QueryNotice text="Institutions could not be loaded." onRetry={() => institutionsQuery.refetch()} testId="status-admin-institutions-error" />
-                  : institutions.length ? <ul className="space-y-2">{institutions.map((institution) => <li key={institution.id} className="institution-row" data-testid={`row-institution-${institution.id}`}><span className="flex min-w-0 items-center gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#e9efe8] text-[#416953]"><Landmark size={15} /></span><span className="min-w-0 truncate text-sm font-medium text-[#334c41]" data-testid={`text-institution-name-${institution.id}`}>{institution.name}</span></span><span className="shrink-0 text-[11px] text-[#7c877f]">{institution.batchCount} {institution.batchCount === 1 ? 'batch' : 'batches'}</span></li>)}</ul>
-                    : <div className="empty-mini"><Landmark size={17} /><span>No institutions added yet.</span></div>}
+                  : filteredInstitutions.length ? <ul className="space-y-2">{filteredInstitutions.map((institution) => <li key={institution.id} className="institution-row flex-wrap" data-testid={`row-institution-${institution.id}`}>
+                    {editingInstitution === institution.id ? <div className="flex w-full flex-wrap items-center gap-2">
+                      <input className="form-control min-w-[180px] flex-1" value={institutionDraft} onChange={(event) => setInstitutionDraft(event.target.value)} maxLength={160} data-testid={`input-rename-institution-${institution.id}`} />
+                      <button className="secondary-button min-h-9 px-3" onClick={() => void renameInstitution(institution.id)} disabled={updateInstitution.isPending} data-testid={`button-save-institution-${institution.id}`}><Save size={14} /> Save</button>
+                      <button className="text-xs font-semibold text-[#718078]" onClick={() => setEditingInstitution(null)} data-testid={`button-cancel-institution-${institution.id}`}>Cancel</button>
+                    </div> : <>
+                      <span className="flex min-w-0 flex-1 items-center gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#e9efe8] text-[#416953]"><Landmark size={15} /></span><span className="min-w-0"><span className="block truncate text-sm font-medium text-[#334c41]" data-testid={`text-institution-name-${institution.id}`}>{institution.name}</span><span className="mt-0.5 block text-[10px] text-[#7c877f]" data-testid={`text-institution-batches-${institution.id}`}>{institution.batchCount} {institution.batchCount === 1 ? 'batch' : 'batches'}</span></span></span>
+                      <div className="flex items-center gap-1"><button className="flex h-8 w-8 items-center justify-center rounded-md text-[#557362] hover:bg-[#edf2ec]" aria-label={`Rename ${institution.name}`} onClick={() => { setInstitutionDraft(institution.name); setEditingInstitution(institution.id); }} data-testid={`button-edit-institution-${institution.id}`}><Pencil size={14} /></button><button className="flex h-8 w-8 items-center justify-center rounded-md text-[#a34b3d] hover:bg-[#fbefec]" aria-label={`Delete ${institution.name}`} onClick={() => void removeInstitution(institution.id, institution.name)} data-testid={`button-delete-institution-${institution.id}`}><Trash2 size={14} /></button></div>
+                    </>}
+                  </li>)}</ul>
+                    : <div className="empty-mini"><Landmark size={17} /><span>{institutions.length ? 'No institutions match that search.' : 'No institutions added yet.'}</span></div>}
             </div>
           </section>
 
@@ -679,8 +867,55 @@ function AdminPage() {
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h2 id="recent-heading" className="text-base font-semibold text-[#29463b]">Recent batches</h2><p className="mt-1 text-xs text-[#7d877f]">Recently published certificate collections.</p></div><span className="inline-flex items-center gap-1.5 rounded-full bg-[#f3efe4] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.1em] text-[#857346]"><FileText size={12} /> Private templates</span></div>
           {batchesQuery.isLoading ? <div className="space-y-2"><div className="h-14 animate-pulse rounded-lg bg-[#f0ede5]" /><div className="h-14 animate-pulse rounded-lg bg-[#f0ede5]" /></div>
             : batchesQuery.isError ? <QueryNotice text="Batches could not be loaded." onRetry={() => batchesQuery.refetch()} testId="status-batches-error" />
-              : batchesQuery.data?.length ? <div className="overflow-x-auto"><table className="admin-table w-full min-w-[600px] text-left"><thead><tr><th>Batch</th><th>Institution</th><th>Recipients</th><th>Created</th><th>Template</th></tr></thead><tbody>{batchesQuery.data.map((batch) => <tr key={batch.id} data-testid={`row-batch-${batch.id}`}><td className="font-semibold text-[#344e42]" data-testid={`text-batch-title-${batch.id}`}>{batch.title}</td><td>{batch.institutionName}</td><td>{batch.recipientCount.toLocaleString()}</td><td>{new Date(batch.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</td><td><span className="inline-flex items-center gap-1.5"><FileText size={13} />{batch.templateFilename}</span></td></tr>)}</tbody></table></div>
+               : batchesQuery.data?.length ? <div className="overflow-x-auto"><table className="admin-table w-full min-w-[800px] text-left"><thead><tr><th>Batch</th><th>Institution</th><th>Recipients</th><th>Created</th><th>Template</th><th>Manage</th></tr></thead><tbody>{batchesQuery.data.map((batch) => <tr key={batch.id} data-testid={`row-batch-${batch.id}`}>
+                 {editingBatch === batch.id ? <>
+                   <td><input className="form-control min-w-[170px]" value={batchDraft.title} onChange={(event) => setBatchDraft({ ...batchDraft, title: event.target.value })} data-testid={`input-edit-batch-title-${batch.id}`} /></td>
+                   <td><select className="form-control min-w-[180px]" value={batchDraft.institutionId} onChange={(event) => setBatchDraft({ ...batchDraft, institutionId: event.target.value })} data-testid={`select-edit-batch-institution-${batch.id}`}>{institutions.map((institution) => <option key={institution.id} value={institution.id}>{institution.name}</option>)}</select></td>
+                   <td>{batch.recipientCount.toLocaleString()}</td><td>{new Date(batch.createdAt).toLocaleDateString()}</td><td>{batch.templateFilename}</td>
+                   <td><div className="flex gap-1"><button className="secondary-button min-h-8 px-2" onClick={() => void saveBatch(batch.id)} disabled={updateBatch.isPending} data-testid={`button-save-batch-${batch.id}`}><Save size={13} /> Save</button><button className="text-xs" onClick={() => setEditingBatch(null)} data-testid={`button-cancel-batch-${batch.id}`}>Cancel</button></div></td>
+                 </> : <>
+                   <td className="font-semibold text-[#344e42]" data-testid={`text-batch-title-${batch.id}`}>{batch.title}</td><td data-testid={`text-batch-institution-${batch.id}`}>{batch.institutionName}</td><td data-testid={`text-batch-recipient-count-${batch.id}`}>{batch.recipientCount.toLocaleString()}</td><td>{new Date(batch.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</td><td><span className="inline-flex items-center gap-1.5"><FileText size={13} />{batch.templateFilename}</span></td>
+                   <td><div className="flex flex-wrap gap-1"><button className="text-xs font-semibold text-[#416953] hover:underline" onClick={() => { setBatchDraft({ title: batch.title, institutionId: batch.institutionId }); setEditingBatch(batch.id); }} data-testid={`button-edit-batch-${batch.id}`}>Edit</button><button className="text-xs font-semibold text-[#416953] hover:underline" onClick={() => { setSelectedBatchForRecipients(batch.id); setEditingRecipient(null); setNewRecipientNames(''); setRecipientSearch(''); setManagementError(''); setManagementSuccess(''); }} data-testid={`button-open-recipients-${batch.id}`}>Recipients</button><button className="text-xs font-semibold text-[#a34b3d] hover:underline" onClick={() => void removeBatch(batch.id, batch.title)} data-testid={`button-delete-batch-${batch.id}`}>Delete</button></div></td>
+                 </>}
+               </tr>)}</tbody></table></div>
                 : <div className="empty-batches"><span className="empty-seal"><FileText size={21} /></span><div><h3>No batches yet</h3><p>When you create the first batch, it will appear here.</p></div></div>}
+        </section>
+        {selectedBatchForRecipients && <section className="mt-8 admin-card" aria-labelledby="recipients-heading" data-testid="panel-batch-recipients">
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div><p className="eyebrow"><span className="eyebrow-mark" /> Recipient records</p><h2 id="recipients-heading" className="serif mt-2 text-2xl tracking-[-.04em] text-[#203c35]">{selectedBatch?.title ?? 'Batch recipients'}</h2><p className="mt-1 text-xs text-[#758078]">{selectedBatch?.institutionName} · names are held in administrator records only</p></div>
+            <button className="secondary-button min-h-9" onClick={() => { setSelectedBatchForRecipients(''); setNewRecipientNames(''); setRecipientSearch(''); }} data-testid="button-close-recipients"><X size={14} /> Close list</button>
+          </div>
+          <form onSubmit={submitAdditionalRecipients} className="mb-5 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <label><span className="field-label">Add multiple full names</span><textarea className="form-control mt-2 min-h-[90px] resize-y py-3 leading-6" value={newRecipientNames} onChange={(event) => setNewRecipientNames(event.target.value)} placeholder={'One full name per line'} data-testid="input-add-recipient-names" /></label>
+            <button className="primary-button min-h-[46px] justify-center" type="submit" disabled={addRecipients.isPending} data-testid="button-add-recipients">{addRecipients.isPending ? 'Adding names…' : <>Add names <Users size={14} /></>}</button>
+          </form>
+          <label className="relative mb-3 block"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#859087]" /><input className="form-control pl-9" value={recipientSearch} onChange={(event) => setRecipientSearch(event.target.value)} placeholder="Find a recipient by name" aria-label="Find a recipient by name" data-testid="input-recipient-search" /></label>
+          {recipientsQuery.isLoading ? <div className="space-y-2"><div className="h-12 animate-pulse rounded-lg bg-[#f0ede5]" /><div className="h-12 animate-pulse rounded-lg bg-[#f0ede5]" /></div>
+            : recipientsQuery.isError ? <QueryNotice text="Recipient records could not be loaded." onRetry={() => recipientsQuery.refetch()} testId="status-recipients-error" />
+              : recipientsQuery.data?.length && filteredRecipients.length ? <ul className="divide-y divide-[#eee9df] rounded-lg border border-[#eee9df]" data-testid="list-batch-recipients">{filteredRecipients.map((recipient) => <li key={recipient.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3" data-testid={`row-recipient-${recipient.id}`}>
+                {editingRecipient === recipient.id ? <div className="flex w-full flex-wrap items-center gap-2"><input className="form-control min-w-[190px] flex-1" value={recipientDraft} onChange={(event) => setRecipientDraft(event.target.value)} maxLength={180} data-testid={`input-edit-recipient-${recipient.id}`} /><button className="secondary-button min-h-9 px-3" onClick={() => void saveRecipient(recipient.id)} disabled={updateRecipient.isPending} data-testid={`button-save-recipient-${recipient.id}`}><Save size={14} /> Save</button><button className="text-xs font-semibold text-[#718078]" onClick={() => setEditingRecipient(null)} data-testid={`button-cancel-recipient-${recipient.id}`}>Cancel</button></div> : <>
+                  <span className="text-sm font-medium text-[#334c41]" data-testid={`text-recipient-name-${recipient.id}`}>{recipient.fullName}</span>
+                  <span className="flex items-center gap-1"><button className="flex h-8 w-8 items-center justify-center rounded-md text-[#557362] hover:bg-[#edf2ec]" aria-label={`Edit ${recipient.fullName}`} onClick={() => { setRecipientDraft(recipient.fullName); setEditingRecipient(recipient.id); }} data-testid={`button-edit-recipient-${recipient.id}`}><Pencil size={14} /></button><button className="flex h-8 w-8 items-center justify-center rounded-md text-[#a34b3d] hover:bg-[#fbefec]" aria-label={`Delete ${recipient.fullName}`} onClick={() => void removeRecipient(recipient.id, recipient.fullName)} data-testid={`button-delete-recipient-${recipient.id}`}><Trash2 size={14} /></button></span>
+                </>}</li>)}</ul>
+                : <div className="empty-batches" data-testid="status-no-recipients"><span className="empty-seal"><Users size={19} /></span><div><h3>{recipientsQuery.data?.length ? 'No recipients match that search' : 'No recipient records in this batch'}</h3><p>{recipientsQuery.data?.length ? 'Try another part of the recipient name.' : 'Add full names above to make them searchable through the public portal.'}</p></div></div>}
+        </section>}
+        <section className="mt-8 admin-card" aria-labelledby="name-style-heading">
+          <div className="admin-card-heading"><span className="icon-tile icon-tile-gold"><Pencil size={17} /></span><div><h2 id="name-style-heading">Certificate name style</h2><p>One global print style for recipient names across all certificates.</p></div></div>
+          <p className="mt-4 max-w-3xl text-xs leading-5 text-[#77837b]">This only changes how the recipient name is rendered. Your uploaded template artwork remains untouched.</p>
+          {styleQuery.isLoading ? <div className="mt-5 h-24 animate-pulse rounded-lg bg-[#f0ede5]" data-testid="skeleton-name-style" /> :
+            styleQuery.isError ? <QueryNotice text="Global name style could not be loaded." onRetry={() => styleQuery.refetch()} testId="status-name-style-error" /> :
+              <form onSubmit={saveNameStyle} className="mt-5 grid gap-5 lg:grid-cols-[1fr_260px]">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <label><span className="field-label">Font family</span><select className="form-control mt-2" value={nameStyleDraft.fontFamily} onChange={(event) => setNameStyleDraft({ ...nameStyleDraft, fontFamily: event.target.value })} data-testid="select-name-font"><option value="helvetica">Helvetica</option><option value="helveticaBold">Helvetica Bold</option><option value="timesRoman">Times Roman</option><option value="timesRomanBold">Times Roman Bold</option><option value="courier">Courier</option><option value="courierBold">Courier Bold</option></select></label>
+                  <label><span className="field-label">Text color</span><span className="mt-2 flex gap-2"><input type="color" className="h-[46px] w-14 cursor-pointer rounded-lg border border-[#ded8cc] bg-[#fffefa] p-1" value={nameStyleDraft.textColor} onChange={(event) => setNameStyleDraft({ ...nameStyleDraft, textColor: event.target.value })} aria-label="Choose recipient name text color" data-testid="input-name-color-picker" /><input className="form-control font-mono" value={nameStyleDraft.textColor} onChange={(event) => setNameStyleDraft({ ...nameStyleDraft, textColor: event.target.value })} pattern="^#[0-9a-fA-F]{6}$" data-testid="input-name-color" /></span></label>
+                  <label><span className="field-label">Font size <span className="font-normal text-[#7c877f]">({nameStyleDraft.fontSize} pt)</span></span><input type="range" className="mt-4 w-full accent-[#315b48]" min={12} max={72} step={1} value={nameStyleDraft.fontSize} onChange={(event) => setNameStyleDraft({ ...nameStyleDraft, fontSize: Number(event.target.value) })} data-testid="input-name-font-size" /><span className="flex justify-between text-[10px] text-[#849087]"><span>12 pt</span><span>72 pt</span></span></label>
+                </div>
+                <div className="flex flex-col justify-between gap-4 rounded-xl border border-[#e6e0d4] bg-[#f8f5ec] p-4">
+                  <div><span className="text-[9px] font-bold uppercase tracking-[.16em] text-[#95804a]">Name preview</span><div className="mt-3 flex min-h-[78px] items-center justify-center overflow-hidden rounded-md border border-dashed border-[#d8d0bf] bg-[#fffdf8] px-2 text-center" style={{ color: nameStyleDraft.textColor, fontSize: `${Math.min(nameStyleDraft.fontSize, 34)}px`, fontFamily: nameStyleDraft.fontFamily.startsWith('times') ? 'Georgia, serif' : nameStyleDraft.fontFamily.startsWith('courier') ? 'monospace' : 'Arial, sans-serif', fontWeight: nameStyleDraft.fontFamily.endsWith('Bold') ? 700 : 400 }} data-testid="preview-certificate-name">Amina Owusu</div></div>
+                  <button className="primary-button justify-center" type="submit" disabled={updateNameStyle.isPending} data-testid="button-save-name-style">{updateNameStyle.isPending ? 'Saving style…' : <>Save global style <Save size={14} /></>}</button>
+                </div>
+              </form>}
+          {styleQuery.data?.updatedAt && <p className="mt-3 text-[10px] text-[#879188]" data-testid="text-name-style-updated">Last saved {new Date(styleQuery.data.updatedAt).toLocaleString()}</p>}
         </section>
         {overview?.recentBatches && overview.recentBatches.length > 0 && batchesQuery.isError && <div className="sr-only">{overview.recentBatches.length} recent batches</div>}
       </main>

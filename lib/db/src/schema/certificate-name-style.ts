@@ -1,4 +1,6 @@
+import { createInsertSchema } from "drizzle-zod";
 import { pgTable, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { z } from "zod/v4";
 
 export const certificateNameStyleTable = pgTable("certificate_name_style", {
   id: text("id").primaryKey().default("global"),
@@ -11,5 +13,11 @@ export const certificateNameStyleTable = pgTable("certificate_name_style", {
     .$onUpdate(() => new Date()),
 });
 
+export const insertCertificateNameStyleSchema = createInsertSchema(
+  certificateNameStyleTable,
+).omit({ id: true, updatedAt: true });
+export type InsertCertificateNameStyle = z.infer<
+  typeof insertCertificateNameStyleSchema
+>;
 export type CertificateNameStyle =
   typeof certificateNameStyleTable.$inferSelect;
